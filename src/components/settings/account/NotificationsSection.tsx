@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Bell, Mail, MessageSquare, Clock, AlarmClock } from 'lucide-react';
+import { AlarmClock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -40,32 +40,19 @@ const TIME_OPTIONS = Array.from({ length: 33 }, (_, i) => {
   return { value, label };
 });
 
-const SectionHeader = ({ icon: Icon, title, description }: { icon: React.ElementType; title: string; description?: string }) => (
-  <div className="flex items-center gap-2 mb-2">
-    <Icon className="h-4 w-4 text-muted-foreground" />
-    <span className="text-sm font-semibold">{title}</span>
-    {description && <span className="text-xs text-muted-foreground ml-1">— {description}</span>}
-  </div>
-);
-
-const ToggleRow = ({ label, checked, onChange, icon: Icon }: { label: string; checked: boolean; onChange: (v: boolean) => void; icon?: React.ElementType }) => (
-  <div className="flex items-center justify-between py-1.5">
-    <div className="flex items-center gap-2">
-      {Icon && <Icon className="h-3.5 w-3.5 text-muted-foreground" />}
-      <Label className="text-sm cursor-pointer">{label}</Label>
-    </div>
-    <Switch checked={checked} onCheckedChange={onChange} />
+const ToggleChip = ({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) => (
+  <div className="flex items-center justify-between gap-3 px-3 py-2 border rounded-lg bg-card min-w-0">
+    <Label className="text-sm cursor-pointer truncate">{label}</Label>
+    <Switch checked={checked} onCheckedChange={onChange} className="shrink-0" />
   </div>
 );
 
 const NotificationsSection = ({ notificationPrefs, setNotificationPrefs, userId, userTimezone }: NotificationsSectionProps) => {
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSavedRef = useRef<string>(JSON.stringify(notificationPrefs));
-  const [isSaving, setIsSaving] = useState(false);
 
   const saveNotificationPrefs = useCallback(async (prefs: NotificationPrefs) => {
     if (!userId) return;
-    setIsSaving(true);
     try {
       const { error } = await supabase
         .from('notification_preferences')
@@ -91,8 +78,6 @@ const NotificationsSection = ({ notificationPrefs, setNotificationPrefs, userId,
     } catch (error) {
       console.error('Error saving notification preferences:', error);
       toast.error('Failed to save notification preferences');
-    } finally {
-      setIsSaving(false);
     }
   }, [userId]);
 
@@ -109,39 +94,32 @@ const NotificationsSection = ({ notificationPrefs, setNotificationPrefs, userId,
   };
 
   return (
-    <div className="space-y-1">
-      {/* Delivery Methods */}
-      <div className="rounded-md border bg-card p-4">
-        <SectionHeader icon={Bell} title="Delivery Methods" description="How you receive notifications" />
-        <div className="divide-y divide-border">
-          <ToggleRow icon={Mail} label="Email Notifications" checked={notificationPrefs.email_notifications} onChange={(v) => updatePref('email_notifications', v)} />
-          <ToggleRow icon={MessageSquare} label="In-App Notifications" checked={notificationPrefs.in_app_notifications} onChange={(v) => updatePref('in_app_notifications', v)} />
-        </div>
-      </div>
-
-      {/* Delivery Frequency + Reminder Time */}
-      <div className="rounded-md border bg-card p-4">
-        <SectionHeader icon={Clock} title="Frequency & Reminders" />
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-2">
+    <div className="space-y-4">
+      {/* Delivery & Frequency */}
+      <div className="space-y-1.5">
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Delivery & Frequency</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <ToggleChip label="Email" checked={notificationPrefs.email_notifications} onChange={(v) => updatePref('email_notifications', v)} />
+          <ToggleChip label="In-App" checked={notificationPrefs.in_app_notifications} onChange={(v) => updatePref('in_app_notifications', v)} />
+          <div className="flex items-center gap-2 px-3 py-2 border rounded-lg bg-card">
             <Label className="text-sm whitespace-nowrap">Frequency</Label>
             <Select value={notificationPrefs.notification_frequency} onValueChange={(v) => updatePref('notification_frequency', v)}>
-              <SelectTrigger className="w-[130px] h-8 text-sm">
+              <SelectTrigger className="w-[110px] h-7 text-sm border-0 bg-muted/50 px-2">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="instant">Instant</SelectItem>
                 <SelectItem value="daily">Daily Digest</SelectItem>
-                <SelectItem value="weekly">Weekly Digest</SelectItem>
+                <SelectItem value="weekly">Weekly</SelectItem>
               </SelectContent>
             </Select>
           </div>
           {notificationPrefs.task_reminders && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 px-3 py-2 border rounded-lg bg-card">
               <AlarmClock className="h-3.5 w-3.5 text-muted-foreground" />
-              <Label className="text-sm whitespace-nowrap">Daily Reminder</Label>
+              <Label className="text-sm whitespace-nowrap">Reminder</Label>
               <Select value={notificationPrefs.daily_reminder_time} onValueChange={(v) => updatePref('daily_reminder_time', v)}>
-                <SelectTrigger className="w-[120px] h-8 text-sm">
+                <SelectTrigger className="w-[100px] h-7 text-sm border-0 bg-muted/50 px-2">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -156,25 +134,25 @@ const NotificationsSection = ({ notificationPrefs, setNotificationPrefs, userId,
         </div>
       </div>
 
-      {/* Module Notifications */}
-      <div className="rounded-md border bg-card p-4">
-        <SectionHeader icon={Bell} title="Module Notifications" description="Which modules send notifications" />
-        <div className="divide-y divide-border">
-          <ToggleRow label="Leads" checked={notificationPrefs.leads_notifications} onChange={(v) => updatePref('leads_notifications', v)} />
-          <ToggleRow label="Contacts" checked={notificationPrefs.contacts_notifications} onChange={(v) => updatePref('contacts_notifications', v)} />
-          <ToggleRow label="Accounts" checked={notificationPrefs.accounts_notifications} onChange={(v) => updatePref('accounts_notifications', v)} />
+      {/* Modules */}
+      <div className="space-y-1.5">
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Modules</span>
+        <div className="grid grid-cols-3 gap-2">
+          <ToggleChip label="Leads" checked={notificationPrefs.leads_notifications} onChange={(v) => updatePref('leads_notifications', v)} />
+          <ToggleChip label="Contacts" checked={notificationPrefs.contacts_notifications} onChange={(v) => updatePref('contacts_notifications', v)} />
+          <ToggleChip label="Accounts" checked={notificationPrefs.accounts_notifications} onChange={(v) => updatePref('accounts_notifications', v)} />
         </div>
       </div>
 
-      {/* Event Triggers */}
-      <div className="rounded-md border bg-card p-4">
-        <SectionHeader icon={Bell} title="Event Triggers" description="Which events trigger notifications" />
-        <div className="divide-y divide-border">
-          <ToggleRow label="Lead Assigned" checked={notificationPrefs.lead_assigned} onChange={(v) => updatePref('lead_assigned', v)} />
-          <ToggleRow label="Deal Updates" checked={notificationPrefs.deal_updates} onChange={(v) => updatePref('deal_updates', v)} />
-          <ToggleRow label="Action Item Reminders" checked={notificationPrefs.task_reminders} onChange={(v) => updatePref('task_reminders', v)} />
-          <ToggleRow label="Meeting Reminders" checked={notificationPrefs.meeting_reminders} onChange={(v) => updatePref('meeting_reminders', v)} />
-          <ToggleRow label="Weekly Digest" checked={notificationPrefs.weekly_digest} onChange={(v) => updatePref('weekly_digest', v)} />
+      {/* Events */}
+      <div className="space-y-1.5">
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Events</span>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+          <ToggleChip label="Lead Assigned" checked={notificationPrefs.lead_assigned} onChange={(v) => updatePref('lead_assigned', v)} />
+          <ToggleChip label="Deal Updates" checked={notificationPrefs.deal_updates} onChange={(v) => updatePref('deal_updates', v)} />
+          <ToggleChip label="Action Reminders" checked={notificationPrefs.task_reminders} onChange={(v) => updatePref('task_reminders', v)} />
+          <ToggleChip label="Meeting Reminders" checked={notificationPrefs.meeting_reminders} onChange={(v) => updatePref('meeting_reminders', v)} />
+          <ToggleChip label="Weekly Digest" checked={notificationPrefs.weekly_digest} onChange={(v) => updatePref('weekly_digest', v)} />
         </div>
       </div>
     </div>

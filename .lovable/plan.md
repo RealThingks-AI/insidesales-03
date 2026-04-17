@@ -1,50 +1,45 @@
 
 
-## Enhance Campaigns Module UI
+# Fix Plan: Account Table & Modal Improvements
 
-### Problem
-1. No dashboard/overview view -- only a list table exists
-2. Header layout doesn't match other modules (uses `p-6 pb-4` instead of `h-16 px-6 border-b` fixed height)
-3. Filter bar styling inconsistent (uses `p-4 border-b` instead of `bg-muted/30 px-6 py-3`)
+## Changes
 
-### Changes
+### 1. Add Description Column to Account Table (AccountTable.tsx + AccountTableBody.tsx)
 
-**1. Add a Campaign Dashboard view** — new file `src/components/campaigns/CampaignDashboard.tsx`
+**AccountTable.tsx (line 42):** Insert `description` column at order 1 (after account_name), shift all other orders up by 1. Also add `'description'` to `searchFields`.
 
-A grid-based overview showing:
-- **Summary stat cards** (row 1): Total Campaigns, Active, Draft, Completed -- small cards with counts
-- **MART Progress overview** (row 2): Shows campaigns with their MART completion as progress bars
-- **Status breakdown** (row 2): A simple status distribution (bar or donut chart)
-- **Recent campaigns** (row 3): Last 5 campaigns as compact clickable cards with status badge, type, date range
+**AccountTableBody.tsx:**
+- Add `description` field formatting in `formatCellValue` — render with `line-clamp-2` and `truncate` to prevent overflow
+- In table cell classes (line 277-285), add specific width rule for `description`: `min-w-[250px] max-w-[350px]`
+- Apply `table-fixed` layout with explicit column widths to prevent content overlap across ALL columns
+- For `linked_contacts` column header, center-align the label text to match the centered badge data
 
-Uses existing `useCampaigns` hook data -- no new queries needed.
+### 2. Fix Column Overflow / Alignment Issues (AccountTableBody.tsx)
 
-**2. Add view toggle to Campaigns page** — modify `src/pages/Campaigns.tsx`
+- Add `overflow-hidden text-ellipsis` to all table cells to prevent text from bleeding into adjacent columns
+- Set `table-layout: fixed` on the Table element so column widths are enforced
+- Ensure `linked_contacts` header text is centered (currently uses left-aligned `<span>` but data is centered)
+- Set proper `min-width` values: account_name 200px, description 250px, linked 80px centered, others 100px
 
-- Add `ToggleGroup` with "Dashboard" and "List" views (matching Deals page pattern with `LayoutGrid` / `List` icons)
-- Fix header to use `h-16 px-6 border-b bg-background` (matching Contacts/Accounts pattern)
-- Fix filter bar to use `bg-muted/30 px-6 py-3` styling
-- Move view toggle + "New Campaign" button into the header row
-- Dashboard view shown by default, list view shows the existing table
-- Filters only visible in List view
+### 3. Rearrange Account Modal Fields (AccountModal.tsx)
 
-**3. Layout alignment fix**
+Restructure the form layout from the current 2-column grid to specific rows:
 
-Replace:
-```
-<div className="flex items-center justify-between p-6 pb-4 border-b border-border">
-```
-With:
-```
-<div className="flex-shrink-0 h-16 px-6 border-b bg-background flex items-center justify-between">
-```
+- **Row 1:** Account Name + Industry (2-col grid)
+- **Row 2:** Description (full width textarea)
+- **Row 3:** Website + Phone (2-col grid)
+- **Row 4:** Region + Country (2-col grid) — country selection auto-updates region via existing `countryToRegion` mapping. The existing `countryRegionMapping.ts` already has 200+ countries and 7 regions with proper sync.
+- **Row 5:** Company Type + Currency + Status (3-col grid)
 
-This aligns the header divider with the sidebar icon divider, matching Contacts and Accounts modules.
+### 4. Country/Region Filtering in Modal
 
-### Files
+Add filtered country list based on selected region. When user selects a region first, only show countries from that region. When country is selected, auto-fill region (already working).
 
-| File | Action |
-|---|---|
-| `src/components/campaigns/CampaignDashboard.tsx` | Create -- dashboard view with stats, MART progress, status breakdown |
-| `src/pages/Campaigns.tsx` | Modify -- add view toggle, fix header/filter bar layout to match other modules |
+## Files Modified
+
+| File | Change |
+|------|--------|
+| `src/components/AccountTable.tsx` | Add description column to defaultColumns, add to searchFields |
+| `src/components/account-table/AccountTableBody.tsx` | Add description cell formatting, fix overflow with table-fixed layout, center Linked header |
+| `src/components/AccountModal.tsx` | Rearrange fields into 5 specific rows, add region-based country filtering |
 
